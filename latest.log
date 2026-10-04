@@ -1,0 +1,5 @@
+[14:32:10] [main/INFO]: Setting user: Player
+[14:32:11] [main/WARN]: Missing dependency: something
+[14:32:12] [Render thread/ERROR]: Failed to load resource
+[14:32:13] [Render thread/INFO]: OpenGL loaded
+[14:32:14] [main/FATAL]: Crash!

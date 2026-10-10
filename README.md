@@ -21,21 +21,24 @@
   <a href="#tech-stack">Tech Stack</a>
 </p>
 
-## Current Features (Phase 1)
+## Current Features
 
-### CLI Log Parser
+### CLI Log Parser (Phase 1)
 - Parses `latest.log` and standard Minecraft server logs.
 - Extracts timestamps, log levels (INFO, WARN, ERROR, FATAL, DEBUG, TRACE), threads, and message bodies.
 - Utilizes `std::regex` to process standard formats like `[HH:MM:SS] [Thread/Level]: Message`.
 - Prints a fast ASCII summary dashboard in the terminal detailing total entries and categorized error counts.
 
-## Roadmap
+### Error Intelligence (Phase 2)
+- Reconstructs multiline Java exceptions: root header, `Caused by:`, `Suppressed:`, stack frames, and omitted-frame markers.
+- Reads Minecraft `.txt` crash reports (description, system details, mod list) and auto-detects the input format.
+- Groups duplicate errors so one issue appears once with its occurrence count and top frame.
+- Matches 21 known-issue rules and reports each finding with severity, confidence, evidence, and fix steps.
+- Names the specific mod behind each error (crash report mod list, mod ids in messages, stack frame packages) and gives a mod-specific fix step instead of generic advice.
+- Falls back to an explicit `unrecognized-error` diagnosis instead of guessing.
+- Ships a GoogleTest suite (65 tests) with log and crash report fixtures.
 
-### Phase 2: Error Intelligence (Up Next)
-- Extract multiline Java exceptions and stack traces.
-- Group repeated errors to reduce log noise (instead of showing the same issue 200 times).
-- Implement rule-based matching to detect known mod loading failures and missing dependencies.
-- Generate basic diagnostic suggestions.
+## Roadmap
 
 ### Phase 3: Desktop Interface
 - Build a responsive Qt 6 graphical dashboard with a custom Minecraft-inspired dark theme.
@@ -78,6 +81,18 @@ cd MineSleuth
 cmake -B build -S .
 cmake --build build
 ./build/src/minesleuth path/to/latest.log
+```
+</details>
+
+### Run the Tests
+
+<details>
+<summary>All platforms</summary>
+
+```sh
+cmake -B build -S .
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 </details>
 

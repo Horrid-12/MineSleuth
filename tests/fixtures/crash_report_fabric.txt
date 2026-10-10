@@ -1,0 +1,20 @@
+---- Minecraft Crash Report ----
+// This doesn't feel right. We're passing a command line option, right?
+
+Description: Mod loading failed
+
+net.fabricmc.loader.impl.FormattedException: Could not find entrypoint for mod coolutil
+	at net.fabricmc.loader.impl.discovery.ModResolver.findEntrypoints(ModResolver.java:157)
+	at net.fabricmc.loader.impl.FabricLoaderImpl.load(FabricLoaderImpl.java:179)
+Caused by: java.lang.ClassNotFoundException: com/coolutil/ModInitializer
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+	... 8 more
+
+-- System Details --
+	Minecraft Version: 1.20.1
+	Operating System: Linux (amd64) version 6.5.0
+	Java Version: 17.0.8, Eclipse Adoptium
+	Fabric Mods:
+		examplemod: Example Mod 1.2.3
+		coolutil: Cool Util 4.5.6
+		fabricloader: Fabric Loader 0.15.11

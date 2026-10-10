@@ -1,0 +1,13 @@
+[19:14:02] [main/INFO] [minecraft/MinecraftForge]: Forge 43.2.0 loading Minecraft 1.19.2
+[19:14:03] [Server thread/WARN] [minecraft/ServerLevel]: Can't keep up! Did the system time change, or is the server overloaded? Running 2147ms behind
+[19:14:04] [Render thread/ERROR] [examplemod/ModLoader]: Example mod exploded unexpectedly
+java.lang.IllegalStateException: Something went terribly wrong in the widget factory
+	at examplemod.widget.WidgetFactory.build(WidgetFactory.java:88)
+	at examplemod.client.ModClient.tick(ModClient.java:41)
+	at net.minecraft.client.Minecraft.tick(Minecraft.java:1700)
+[19:14:05] [Render thread/ERROR] [examplemod/ModLoader]: Example mod exploded unexpectedly
+java.lang.IllegalStateException: Something went terribly wrong in the widget factory
+	at examplemod.widget.WidgetFactory.build(WidgetFactory.java:88)
+	at examplemod.client.ModClient.tick(ModClient.java:41)
+	at net.minecraft.client.Minecraft.tick(Minecraft.java:1700)
+[19:14:06] [main/INFO] [minecraft/MinecraftForge]: Forge Mod Loader has successfully loaded 12 mods

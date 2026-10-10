@@ -1,0 +1,20 @@
+[14:32:10] [main/INFO]: Loading Minecraft 1.20.1 with Fabric Loader 0.15.11
+[14:32:10] [main/INFO]: Loaded 3 mods:
+[14:32:10] [main/INFO]:  - examplemod 1.2.3
+[14:32:11] [main/WARN]: Missing dependency: coolutil
+[14:32:11] [Render thread/INFO]: OpenGL 4.6.0 initialized
+[14:32:12] [Render thread/ERROR]: Could not start mod coolutil
+java.lang.RuntimeException: Could not find entrypoint for mod coolutil
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:57)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+	... 12 more
+Caused by: java.lang.NoClassDefFoundError: com/coolutil/ModInitializer
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525)
+	... 8 more
+[14:32:13] [main/ERROR]: Duplicate mod id: examplemod
+[14:32:14] [Render thread/ERROR]: Failed to load resource minecraft:textures/block/dirt.png
+[14:32:15] [Render thread/ERROR]: Failed to load resource minecraft:textures/block/gravel.png
+[14:32:16] [Render thread/ERROR]: Failed to load resource minecraft:textures/block/sand.png
+[14:32:17] [Render thread/ERROR]: Failed to load resource minecraft:textures/block/wood.png
+[14:32:18] [Render thread/ERROR]: Failed to load resource minecraft:textures/block/stone.png
+[14:32:19] [main/INFO]: Shutting down integrated server

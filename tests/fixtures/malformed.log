@@ -1,0 +1,5 @@
+this file is not a real log[14:32:10] [main/INFO]: partial line
+	at example.broken.Broken.thing(Broken.java:1)
+random prose without any structure
+[14:32:11] [NotAThread]: missing level segment
+[14:32:12] [main/LEVEL9]: unknown level name

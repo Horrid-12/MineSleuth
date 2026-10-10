@@ -1,0 +1,18 @@
+---- Minecraft Crash Report ----
+// This doesn't feel right. We're passing a command line option, right?
+
+Description: Ticking entity
+
+java.lang.OutOfMemoryError: Java heap space
+	at net.minecraft.world.entity.Entity.tick(Entity.java:1234)
+	at net.minecraft.server.level.ServerLevel.tick(ServerLevel.java:567)
+	... 12 more
+
+-- System Details --
+	Minecraft Version: 1.20.4
+	Operating System: Windows 11 (amd64) version 10.0
+	Java Version: 17.0.8, Eclipse Adoptium
+	Memory: 4096 MiB / 4096 MiB
+	CPU: 8x Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz
+	GL Version: 4.6.0 NVIDIA 546.33
+	Crash Report UUID: 4f9b2a1e-7c3d-4e8a-9b21-5d6f7a8b9c0d

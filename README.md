@@ -38,12 +38,12 @@
 - Falls back to an explicit `unrecognized-error` diagnosis instead of guessing.
 - Ships a GoogleTest suite (65 tests) with log and crash report fixtures.
 
-## Roadmap
-
-### Phase 3: Desktop Interface
-- Build a responsive Qt 6 graphical dashboard with a custom Minecraft-inspired dark theme.
+## Desktop Interface
+- A responsive Qt 6 graphical dashboard with a Monotonic Prism Launcher Inspired UI.
 - Implement drag-and-drop log imports and searchable log views.
 - Add detailed diagnostic inspection panels and interactive statistic charts.
+
+## Roadmap
 
 ### Phase 4: Advanced Features
 - Live log monitoring and file watching.

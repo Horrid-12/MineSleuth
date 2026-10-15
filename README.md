@@ -23,13 +23,13 @@
 
 ## Current Features
 
-### CLI Log Parser (Phase 1)
+### CLI Log Parser
 - Parses `latest.log` and standard Minecraft server logs.
 - Extracts timestamps, log levels (INFO, WARN, ERROR, FATAL, DEBUG, TRACE), threads, and message bodies.
 - Utilizes `std::regex` to process standard formats like `[HH:MM:SS] [Thread/Level]: Message`.
 - Prints a fast ASCII summary dashboard in the terminal detailing total entries and categorized error counts.
 
-### Error Intelligence (Phase 2)
+### Error Intelligence
 - Reconstructs multiline Java exceptions: root header, `Caused by:`, `Suppressed:`, stack frames, and omitted-frame markers.
 - Reads Minecraft `.txt` crash reports (description, system details, mod list) and auto-detects the input format.
 - Groups duplicate errors so one issue appears once with its occurrence count and top frame.

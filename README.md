@@ -54,7 +54,6 @@
 
 MineSleuth uses a modular architecture, strictly separating the core C++20 parsing engine from the future Qt 6 GUI framework.
 
-Please refer to the [Agents Instructions](./docs/Agents.md) for deeper architectural guidelines and codebase rules.
 
 ## Get Started
 

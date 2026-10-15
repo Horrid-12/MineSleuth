@@ -1,0 +1,229 @@
+/* MineSleuth Qt 6 Prism Launcher Monotone Theme */
+/* Color Palette: Canvas #1E1E1E | Panel #242424 | Border #333333 | Accent #2675BF */
+
+* {
+    font-family: "Futura", "Jost", "Century Gothic", "Segoe UI", sans-serif;
+    color: #E0E0E0;
+    font-size: 12px;
+}
+
+QMainWindow, QDialog {
+    background-color: #1E1E1E;
+}
+
+QWidget#CentralWidget {
+    background-color: #1E1E1E;
+}
+
+/* ToolBar & Status Bar */
+QToolBar {
+    background-color: #242424;
+    border-bottom: 1px solid #333333;
+    spacing: 6px;
+    padding: 4px 8px;
+}
+
+QStatusBar {
+    background-color: #181818;
+    border-top: 1px solid #333333;
+    color: #9E9E9E;
+    font-size: 11px;
+}
+
+QStatusBar QLabel {
+    color: #9E9E9E;
+    font-size: 11px;
+}
+
+/* Standard Buttons */
+QPushButton {
+    background-color: #1E1E1E;
+    border: 1px solid #333333;
+    border-radius: 2px;
+    padding: 5px 12px;
+    color: #E0E0E0;
+    font-weight: 500;
+}
+
+QPushButton:hover {
+    background-color: #2A2A2A;
+    border-color: #3E3E3E;
+}
+
+QPushButton:pressed {
+    background-color: #303030;
+}
+
+QPushButton:disabled {
+    color: #555555;
+    background-color: #181818;
+    border-color: #282828;
+}
+
+/* Primary Action Button (Prism Blue) */
+QPushButton#PrimaryButton {
+    background-color: #2675BF;
+    border: 1px solid #20619E;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: #2F85D8;
+    border-color: #2675BF;
+}
+
+QPushButton#PrimaryButton:pressed {
+    background-color: #1D5991;
+}
+
+/* Secondary Action Button */
+QPushButton#SecondaryButton {
+    background-color: #242424;
+    border: 1px solid #3E3E3E;
+    color: #E0E0E0;
+}
+
+QPushButton#SecondaryButton:hover {
+    background-color: #2E2E2E;
+}
+
+/* Text Inputs / Search */
+QLineEdit {
+    background-color: #181818;
+    border: 1px solid #333333;
+    border-radius: 2px;
+    padding: 4px 8px;
+    color: #E0E0E0;
+    selection-background-color: #2675BF;
+}
+
+QLineEdit:focus {
+    border-color: #2675BF;
+}
+
+/* Panels & Cards */
+QFrame#HeroCard {
+    background-color: #242424;
+    border: 1px solid #333333;
+    border-radius: 2px;
+    padding: 16px;
+}
+
+QFrame#FixBox {
+    background-color: #1C1C1C;
+    border: 1px solid #333333;
+    border-radius: 2px;
+    padding: 12px;
+}
+
+QFrame#SidebarCard {
+    background-color: #242424;
+    border-left: 1px solid #333333;
+    padding: 12px;
+}
+
+/* Tab Widget */
+QTabWidget::pane {
+    border: 1px solid #333333;
+    background-color: #242424;
+    border-radius: 2px;
+}
+
+QTabBar::tab {
+    background-color: #1E1E1E;
+    color: #9E9E9E;
+    padding: 8px 16px;
+    border: 1px solid #333333;
+    border-bottom: none;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #242424;
+    color: #FFFFFF;
+    border-top: 2px solid #2675BF;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover:!selected {
+    background-color: #262626;
+    color: #CCCCCC;
+}
+
+/* Table Views & Trees */
+QTableView, QTreeView, QListView {
+    background-color: #1E1E1E;
+    alternate-background-color: #222222;
+    border: 1px solid #333333;
+    border-radius: 2px;
+    gridline-color: #2C2C2C;
+    selection-background-color: #2675BF;
+    selection-color: #FFFFFF;
+    font-family: "JetBrains Mono", Consolas, monospace;
+}
+
+QHeaderView::section {
+    background-color: #242424;
+    color: #9E9E9E;
+    padding: 6px;
+    border: 1px solid #333333;
+    font-family: "Futura", "Jost", sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+}
+
+/* Terminal / Code / PlainTextEdit */
+QPlainTextEdit#TerminalView {
+    background-color: #141414;
+    color: #D4D4D4;
+    border: 1px solid #333333;
+    border-radius: 2px;
+    font-family: "JetBrains Mono", "Consolas", monospace;
+    font-size: 12px;
+    padding: 8px;
+    selection-background-color: #2675BF;
+}
+
+/* Custom Scrollbars */
+QScrollBar:vertical {
+    border: none;
+    background-color: #1E1E1E;
+    width: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #333333;
+    min-height: 20px;
+    border-radius: 2px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #444444;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background-color: #1E1E1E;
+    height: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #333333;
+    min-width: 20px;
+    border-radius: 2px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #444444;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}

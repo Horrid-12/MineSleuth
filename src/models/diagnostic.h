@@ -2,9 +2,11 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "models/log_entry.h"
+#include "utils/strings.h"
 
 namespace minesleuth {
 
@@ -73,6 +75,16 @@ enum class ModBasis {
     ExceptionClass    // a class named inside the exception message
 };
 
+inline bool isPlatformModId(std::string_view id) {
+    const std::string lower = strings::toLower(strings::trim(id));
+    return lower == "minecraft" || lower == "fabricloader" || lower == "fabric-loader" ||
+           lower == "fabric" || lower == "forge" || lower == "minecraftforge" ||
+           lower == "neoforge" || lower == "quilt" || lower == "quilt_loader" ||
+           lower == "quilt-loader" || lower == "java" || lower == "openjdk" ||
+           lower == "oracle" || lower == "mixin" || lower == "sponge" ||
+           lower == "spongepowered";
+}
+
 // Which mod an error points at. modId is filled when the input names the mod
 // (crash report mod list or a mod id written in the message); ownerPackage and
 // frame are the fallback lead taken from the stack trace or exception text.
@@ -87,6 +99,23 @@ struct ModAttribution {
     std::string frame;
     ModBasis basis = ModBasis::None;
     Confidence confidence = Confidence::Unverified;
+
+    bool isPlatform() const {
+        if (isPlatformModId(modId)) {
+            return true;
+        }
+        if (!ownerPackage.empty()) {
+            if (strings::startsWith(ownerPackage, "net.minecraft") ||
+                strings::startsWith(ownerPackage, "net.fabricmc") ||
+                strings::startsWith(ownerPackage, "net.minecraftforge") ||
+                strings::startsWith(ownerPackage, "net.neoforged") ||
+                strings::startsWith(ownerPackage, "java.") ||
+                strings::startsWith(ownerPackage, "javax.")) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     std::string label() const {
         if (!modId.empty()) {
@@ -119,6 +148,19 @@ struct ModAttribution {
         if (!identified) {
             return {};
         }
+
+        // Platform components (Minecraft, loaders, Java) can never be removed as user mods.
+        if (isPlatform()) {
+            if (ruleId == "class-not-found") {
+                return "A mod is trying to call an incompatible Minecraft method or class ('" +
+                       (frame.empty() ? label() : frame) + "'). Check for mods built for a different Minecraft version, then update or remove them.";
+            }
+            if (ruleId == "minecraft-version-mismatch") {
+                return "Verify your game version in your launcher profile matches what your installed mods require.";
+            }
+            return "This issue involves the " + label() + " base platform. Check for incompatible mods or verify your game installation.";
+        }
+
         if (modId.empty()) {
             return "Update or remove the mod that ships package " + ownerPackage +
                    (frame.empty() ? "" : " (first non-Minecraft frame " + frame + ")") +

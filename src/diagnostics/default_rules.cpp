@@ -25,10 +25,19 @@ std::string evidenceOf(const std::string& text) {
 
 std::string truncate(const std::string& text, std::size_t limit) {
     std::string collapsed = strings::collapseWhitespace(text);
-    if (collapsed.size() > limit) {
-        return collapsed.substr(0, limit - 3) + "...";
+    if (collapsed.size() <= limit) {
+        return collapsed;
     }
-    return collapsed;
+    std::size_t cutoff = collapsed.rfind(' ', limit > 3 ? limit - 3 : limit);
+    if (cutoff == std::string::npos || cutoff < limit / 2) {
+        cutoff = limit > 3 ? limit - 3 : limit;
+    }
+    while (cutoff > 0 && (collapsed[cutoff - 1] == ',' || collapsed[cutoff - 1] == ';' ||
+                          collapsed[cutoff - 1] == ':' || collapsed[cutoff - 1] == '-' ||
+                          collapsed[cutoff - 1] == '.' || collapsed[cutoff - 1] == ' ')) {
+        --cutoff;
+    }
+    return collapsed.substr(0, cutoff) + "...";
 }
 
 std::string searchText(const LogEntry& entry) {
@@ -227,10 +236,23 @@ public:
 
         Diagnostic diagnostic;
         diagnostic.ruleId = id();
-        diagnostic.title = "Crash report description: " + truncate(report.description, 100);
+
+        const std::string cleanDesc = strings::collapseWhitespace(report.description);
+        if (cleanDesc.size() <= 60 && cleanDesc.find(':') == std::string::npos) {
+            diagnostic.title = "Crash: " + cleanDesc;
+        } else {
+            // If the description has a clean first sentence before a period, use that.
+            std::size_t dotPos = cleanDesc.find(". ");
+            if (dotPos != std::string::npos && dotPos <= 100) {
+                diagnostic.title = "Crash: " + cleanDesc.substr(0, dotPos);
+            } else {
+                diagnostic.title = "Game-Reported Crash: " + truncate(cleanDesc, 60);
+            }
+        }
+
         diagnostic.explanation =
             "The game wrote its own description for this crash: \"" +
-            truncate(report.description, 200) + "\"." +
+            cleanDesc + "\"." +
             (systemContext.empty() ? "" : " Reported environment: " + systemContext + ".");
         diagnostic.suggestions = {
             "Reproduce the crash with the same mod set to confirm it is stable.",

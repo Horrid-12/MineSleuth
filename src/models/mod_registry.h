@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "models/diagnostic.h"
 #include "utils/strings.h"
 
 namespace minesleuth {
@@ -70,6 +71,9 @@ public:
         const ModRef* best = nullptr;
         std::size_t bestKeySize = 0;
         for (const ModRef& mod : mods_) {
+            if (isPlatformModId(mod.id)) {
+                continue;  // Base game / loaders / java are never mod culprits to match
+            }
             for (const std::string& rawKey : {mod.id, mod.name}) {
                 const std::string key = normalize(rawKey);
                 // Short ids such as "jei" would match too many packages.

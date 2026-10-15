@@ -67,7 +67,11 @@ bool plausibleModId(const std::string& token) {
     if (token.size() < 3) {
         return false;
     }
-    return stopwords().count(token) == 0;
+    const std::string lower = strings::toLower(token);
+    if (isPlatformModId(lower)) {
+        return false;
+    }
+    return stopwords().count(lower) == 0;
 }
 
 std::string findMention(const std::string& text) {

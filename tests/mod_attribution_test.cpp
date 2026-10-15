@@ -250,3 +250,34 @@ TEST(RulesNameModsTest, CrashReportAttributionIncludesVersion) {
     EXPECT_NE(entrypoint->mod.label().find("4.5.6"), std::string::npos);
     EXPECT_TRUE(anySuggestionNames(*entrypoint, "coolutil"));
 }
+
+TEST(ModAttributionTest, NeverSuggestsUpdatingOrRemovingMinecraft) {
+    ModAttribution attribution;
+    attribution.identified = true;
+    attribution.modId = "minecraft";
+    attribution.modName = "Minecraft";
+    attribution.modVersion = "1.21.11";
+    attribution.frame = "net.minecraft.class_1439.method_37908()";
+
+    EXPECT_TRUE(attribution.isPlatform());
+    const std::string fix = attribution.actionStep("class-not-found");
+    EXPECT_EQ(fix.find("Update or remove minecraft"), std::string::npos);
+    EXPECT_EQ(fix.find("Update or remove Minecraft"), std::string::npos);
+    EXPECT_NE(fix.find("different Minecraft version"), std::string::npos);
+}
+
+TEST(ModAttributionTest, MatchPackageIgnoresMinecraftAndLoaders) {
+    ModRegistry registry;
+    registry.add({"minecraft", "Minecraft", "1.21.11", "crash report"});
+    registry.add({"fabricloader", "Fabric Loader", "0.16.0", "crash report"});
+    registry.add({"sodium", "Sodium", "0.5.8", "crash report"});
+
+    // Platform packages should not match platform mods
+    EXPECT_EQ(registry.matchPackage("net.minecraft.class_1439"), nullptr);
+    EXPECT_EQ(registry.matchPackage("net.fabricmc.loader.impl.launch.knot"), nullptr);
+
+    // Actual third-party mods match
+    const ModRef* matched = registry.matchPackage("me.jellysquid.mods.sodium.client");
+    ASSERT_NE(matched, nullptr);
+    EXPECT_EQ(matched->id, "sodium");
+}

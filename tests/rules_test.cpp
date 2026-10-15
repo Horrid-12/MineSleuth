@@ -268,3 +268,29 @@ TEST(RulesTest, ReportsMissingFiles) {
     EXPECT_FALSE(result.ok);
     EXPECT_FALSE(result.error.empty());
 }
+
+TEST(RulesTest, LongCrashReportDescriptionPreservesSentencesWithoutMidWordCutoff) {
+    CrashReport report;
+    report.valid = true;
+    report.description = "This section contains information related to dynamic lighting, this may not be related to your crash. Mode: fastest Dynamic Light Sources: 0 Spatial Hash Occupancy: 0 / 1024";
+    report.systemDetails.push_back({"Minecraft Version", "1.21.11"});
+
+    const RuleEngine engine = RuleEngine::withDefaultRules();
+    const std::vector<Diagnostic> diags = engine.evaluate({}, {}, {}, &report, nullptr);
+
+    const Diagnostic* descDiag = nullptr;
+    for (const auto& d : diags) {
+        if (d.ruleId == "crash-report-description") {
+            descDiag = &d;
+            break;
+        }
+    }
+    ASSERT_NE(descDiag, nullptr);
+
+    // Title should cleanly preserve the first sentence without cutting off words like "cr..."
+    EXPECT_EQ(descDiag->title.find("cr..."), std::string::npos);
+    EXPECT_NE(descDiag->title.find("dynamic lighting"), std::string::npos);
+    // Explanation should contain the full game description
+    EXPECT_NE(descDiag->explanation.find("Spatial Hash Occupancy"), std::string::npos);
+}
+

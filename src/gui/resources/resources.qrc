@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>style.qss</file>
+        <file>icons/terminal.svg</file>
+        <file>icons/folder.svg</file>
+        <file>icons/clipboard.svg</file>
+        <file>icons/upload.svg</file>
+        <file>icons/globe.svg</file>
+        <file>icons/cube.svg</file>
+    </qresource>
+</RCC>

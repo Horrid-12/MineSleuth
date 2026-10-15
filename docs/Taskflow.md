@@ -30,11 +30,20 @@ Delivered:
   fix step that names that mod (or its package) instead of generic advice.
 - CLI shows the summary box, crash report context, grouped errors, and diagnostics.
 
-## Phase 3: Desktop interface (Not Started)
-- [ ] Build a custom Qt dashboard.
-- [ ] Add drag-and-drop log imports.
-- [ ] Create searchable log views and statistics charts.
-- [ ] Add a detailed error inspection panel.
+## Phase 3: Desktop interface (Completed)
+- [x] Build a custom Qt dashboard.
+- [x] Add drag-and-drop log imports.
+- [x] Create searchable log views and statistics charts.
+- [x] Add a detailed error inspection panel.
+
+Delivered:
+- Designed and verified minimal, user-friendly UI following Prism Launcher monotone dark theme and Futura typography.
+- Implemented `MainWindow` in Qt 6 (`src/gui/main_window.h`/`.cpp`) featuring a top toolbar, session indicators, and drag-and-drop log import handlers.
+- Built `DiagnosticHero` card (`src/gui/diagnostic_hero.h`/`.cpp`) presenting direct incident headlines, plain-English explanations, and prominent copyable resolution boxes.
+- Created `ActionSidebar` (`src/gui/action_sidebar.h`/`.cpp`) providing quick access to `Open Mods Folder`, `Copy Crash Report`, `Upload to mclo.gs`, and `Search on Modrinth` with pure vector SVGs and zero emojis.
+- Created `LogModel` (`src/gui/log_model.h`/`.cpp`) high-performance table model with `QSortFilterProxyModel` for real-time search and severity color-coding.
+- Bundled `style.qss` custom Qt style sheet with the approved `#1E1E1E` canvas, `#242424` panels, and `#2675BF` Prism Blue accents.
+- Configured conditional CMake GUI target `minesleuth_gui` leaving core engine and test suite fully decoupled.
 
 ## Phase 4: Advanced features (Not Started)
 - [ ] Live log monitoring.

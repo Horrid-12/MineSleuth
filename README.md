@@ -37,7 +37,7 @@
 - Names the specific mod behind each error (crash report mod list, mod ids in messages, stack frame packages) and gives a mod-specific fix step instead of generic advice.
 - Cross-checks mod-loader message formats against the MIT-licensed [Aternos codex-minecraft](https://github.com/aternosorg/codex-minecraft) analyser, the engine behind mclo.gs insights.
 - Falls back to an explicit `unrecognized-error` diagnosis instead of guessing.
-- Ships a GoogleTest suite (75 tests) with log and crash report fixtures.
+- Ships a GoogleTest suite (77 tests) with log and crash report fixtures.
 
 ### Desktop Interface
 - A responsive Qt 6 graphical dashboard with a Monotonic Prism Launcher Inspired UI.

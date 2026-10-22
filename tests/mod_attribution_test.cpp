@@ -166,12 +166,16 @@ TEST(ModAttributorTest, IgnoresPlatformFrames) {
     EXPECT_TRUE(attribution.modId.empty());
 }
 
-TEST(ModAttributorTest, IgnoresFabricKnotModulePrefixFrames) {
+TEST(ModAttributorTest, IgnoresModulePrefixedPlatformFrames) {
     const ModAttribution attribution = ModAttributor().attribute(tracedEntry(
         LogLevel::ERROR,
         "java.lang.NoSuchMethodError: net.minecraft.class_1937 "
         "net.minecraft.class_1439.method_37908(...)",
         {"knot//net.minecraft.class_1439", "knot//net.minecraft.class_1937",
+         "quilt_loader//org.quiltmc.loader.impl.launch.knot.Knot",
+         "cpw.mods.modlauncher//cpw.mods.modlauncher.Launcher",
+         "net.neoforged.fml//net.neoforged.fml.loading.FMLServiceProvider",
+         "app/custom.loader@1.0//net.minecraft.server.MinecraftServer",
          "java.base/java.lang.Thread"}));
     EXPECT_FALSE(attribution.identified);
     EXPECT_TRUE(attribution.modId.empty());
@@ -179,11 +183,12 @@ TEST(ModAttributorTest, IgnoresFabricKnotModulePrefixFrames) {
     EXPECT_TRUE(attribution.frame.empty());
 }
 
-TEST(ModAttributorTest, ResolvesModulePrefixedThirdPartyFrame) {
+TEST(ModAttributorTest, ResolvesArbitraryModulePrefixedThirdPartyFrame) {
     const ModAttribution attribution =
         ModAttributor(registryWith("coolutil", "Cool Util", "1.0.0"))
             .attribute(tracedEntry(LogLevel::ERROR, "Widget exploded",
-                                   {"examplemod//com.example.coolutil.Widget"}));
+                                   {"launcher/example.module@1.0/"
+                                    "com.example.coolutil.Widget"}));
     ASSERT_TRUE(attribution.identified);
     EXPECT_EQ(attribution.modId, "coolutil");
     EXPECT_EQ(attribution.modName, "Cool Util");
@@ -237,20 +242,23 @@ TEST(RulesNameModsTest, EngineAppendsModSpecificFix) {
     EXPECT_TRUE(anySuggestionNames(*entrypoint, "coolutil"));
 }
 
-TEST(RulesNameModsTest, FabricKnotFrameDoesNotBlameKnot) {
+TEST(RulesNameModsTest, ModulePrefixedPlatformFrameDoesNotBlameLoader) {
     const std::vector<Diagnostic> diagnostics =
         LogAnalyzer()
             .analyzeEntries({tracedEntry(
                 LogLevel::ERROR,
                 "java.lang.NoSuchMethodError: net.minecraft.class_1937 "
                 "net.minecraft.class_1439.method_37908(...)",
-                {"knot//net.minecraft.class_1439", "knot//net.minecraft.class_1937"})})
+                {"knot//net.minecraft.class_1439", "knot//net.minecraft.class_1937",
+                 "quilt_loader//org.quiltmc.loader.impl.launch.knot.Knot"})})
             .diagnostics;
     const Diagnostic* diagnostic = findRule(diagnostics, "class-not-found");
     ASSERT_NE(diagnostic, nullptr);
     EXPECT_FALSE(diagnostic->mod.identified);
     EXPECT_TRUE(diagnostic->mod.modId.empty());
+    EXPECT_TRUE(diagnostic->mod.ownerPackage.empty());
     EXPECT_FALSE(anySuggestionNames(*diagnostic, "knot"));
+    EXPECT_FALSE(anySuggestionNames(*diagnostic, "quilt_loader"));
 }
 
 TEST(RulesNameModsTest, MissingDependencyNamesTheDependency) {
@@ -307,32 +315,50 @@ TEST(ModAttributionTest, NeverSuggestsUpdatingOrRemovingMinecraft) {
     EXPECT_NE(fix.find("different Minecraft version"), std::string::npos);
 }
 
-TEST(ModAttributionTest, NeverSuggestsUpdatingOrRemovingFabricKnot) {
-    ModAttribution attribution;
-    attribution.identified = true;
-    attribution.modId = "knot";
-    attribution.frame = "knot//net.minecraft.class_1439.method_37908()";
+TEST(ModAttributionTest, NeverSuggestsUpdatingOrRemovingPlatformPackages) {
+    const char* platformPackages[] = {
+        "net.minecraft.class_1439",
+        "net.fabricmc.loader.impl",
+        "org.quiltmc.loader.impl",
+        "cpw.mods.modlauncher",
+        "net.neoforged.fml",
+        "org.bukkit.craftbukkit",
+        "io.papermc.paper",
+        "com.velocitypowered.proxy",
+        "java.lang",
+    };
+    for (const char* package : platformPackages) {
+        ModAttribution attribution;
+        attribution.identified = true;
+        attribution.ownerPackage = package;
+        attribution.frame = std::string(package) + ".run()";
 
-    EXPECT_TRUE(attribution.isPlatform());
-    const std::string fix = attribution.actionStep("class-not-found");
-    EXPECT_EQ(fix.find("Update or remove knot"), std::string::npos);
-    EXPECT_NE(fix.find("different Minecraft version"), std::string::npos);
+        EXPECT_TRUE(attribution.isPlatform()) << package;
+        const std::string fix = attribution.actionStep("class-not-found");
+        EXPECT_EQ(fix.find("Update or remove"), std::string::npos) << package;
+        EXPECT_NE(fix.find("different Minecraft version"), std::string::npos) << package;
+    }
 }
 
 TEST(ModAttributionTest, MatchPackageIgnoresMinecraftAndLoaders) {
     ModRegistry registry;
     registry.add({"minecraft", "Minecraft", "1.21.11", "crash report"});
     registry.add({"fabricloader", "Fabric Loader", "0.16.0", "crash report"});
+    registry.add({"quilt_loader", "Quilt Loader", "0.26.0", "crash report"});
     registry.add({"sodium", "Sodium", "0.5.8", "crash report"});
 
-    // Platform packages should not match platform mods
+    // Platform packages should not match platform mods, regardless of the
+    // module or class-loader prefix on the frame.
     EXPECT_EQ(registry.matchPackage("net.minecraft.class_1439"), nullptr);
     EXPECT_EQ(registry.matchPackage("net.fabricmc.loader.impl.launch.knot"), nullptr);
     EXPECT_EQ(registry.matchPackage("knot//net.minecraft.class_1439"), nullptr);
+    EXPECT_EQ(registry.matchPackage("quilt_loader//org.quiltmc.loader.impl"), nullptr);
+    EXPECT_EQ(registry.matchPackage("app/custom.loader@1.0//net.minecraft.server"), nullptr);
     EXPECT_EQ(registry.matchPackage("java.base/java.lang.Thread"), nullptr);
 
-    // Actual third-party mods match
-    const ModRef* matched = registry.matchPackage("me.jellysquid.mods.sodium.client");
+    // Actual third-party mods match even with an arbitrary loader prefix.
+    const ModRef* matched = registry.matchPackage(
+        "app/custom.loader@1.0//me.jellysquid.mods.sodium.client");
     ASSERT_NE(matched, nullptr);
     EXPECT_EQ(matched->id, "sodium");
 }

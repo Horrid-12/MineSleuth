@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "utils/class_names.h"
 #include "utils/strings.h"
 
 namespace minesleuth {
@@ -88,41 +89,11 @@ std::string findMention(const std::string& text) {
     return {};
 }
 
-// Stack traces from Fabric/Quilt and JPMS can prefix a class with its module,
-// e.g. "knot//net.minecraft.class_1439" or "java.base/java.lang.Thread".
-std::string classNameWithoutModule(const std::string& className) {
-    const std::size_t doubleSlash = className.find("//");
-    if (doubleSlash != std::string::npos) {
-        return className.substr(doubleSlash + 2);
-    }
-    const std::size_t slash = className.find('/');
-    if (slash != std::string::npos) {
-        const std::string rest = className.substr(slash + 1);
-        if (rest.find('.') != std::string::npos) {
-            return rest;
-        }
-    }
-    return className;
-}
-
 // Minecraft, Java, loader, and bundled library packages never name the mod a
-// user should update or remove.
+// user should update or remove. Module and class-loader prefixes are removed
+// first so this works for Fabric, Quilt, Forge, JPMS, and custom launchers.
 bool isPlatformClass(const std::string& className) {
-    const std::string normalized = classNameWithoutModule(className);
-    static const char* const kPlatform[] = {
-        "java.",      "javax.",          "jdk.",          "sun.",
-        "com.sun.",   "net.minecraft.",  "com.mojang.",   "net.fabricmc.",
-        "cpw.mods.",  "net.minecraftforge.", "net.neoforged.", "org.spongepowered.",
-        "org.objectweb.asm.", "org.apache.", "io.netty.", "org.lwjgl.",
-        "com.google.", "it.unimi.",      "org.slf4j.",    "org.jetbrains.",
-        "kotlin.",    "org.openjdk.",    "com.typesafe.", "org.reactivestreams.",
-    };
-    for (const char* prefix : kPlatform) {
-        if (strings::startsWith(normalized, prefix)) {
-            return true;
-        }
-    }
-    return false;
+    return isPlatformPackage(strings::classNameWithoutModule(className));
 }
 
 // The package that owns a class: com.acme.coolutil.init.Mod.onInit -> com.acme.coolutil.init
@@ -267,7 +238,7 @@ ModAttribution ModAttributor::attribute(const LogEntry& entry) const {
             ModAttribution attribution;
             attribution.identified = true;
             attribution.frame = frame->signature();
-            const std::string className = classNameWithoutModule(*frame->className);
+            const std::string className(strings::classNameWithoutModule(*frame->className));
             attribution.ownerPackage = packageOf(className);
             if (const ModRef* known = registry_.matchPackage(className)) {
                 applyKnown(attribution, *known);

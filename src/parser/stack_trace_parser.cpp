@@ -2,6 +2,7 @@
 
 #include <cctype>
 
+#include "utils/class_names.h"
 #include "utils/strings.h"
 
 namespace minesleuth {
@@ -171,10 +172,22 @@ bool StackTraceParser::looksLikeFrame(std::string_view line) {
     if (lastDot == std::string_view::npos || lastDot == 0 || lastDot + 1 >= head.size()) {
         return false;
     }
+    for (char c : head) {
+        if (std::isspace(static_cast<unsigned char>(c)) != 0) {
+            return false;
+        }
+    }
     const std::string_view classPart = head.substr(0, lastDot);
     const std::string_view methodPart = head.substr(lastDot + 1);
-    for (char c : classPart) {
-        if (!isIdentifierChar(c) && c != '.' && c != '/') {
+    // The module/class-loader prefix may contain version and loader notation
+    // ("example.module@1.0", "fabric-loader"), but the class name itself is a
+    // normal dotted binary name.
+    const std::string_view className = strings::classNameWithoutModule(classPart);
+    if (className.empty()) {
+        return false;
+    }
+    for (char c : className) {
+        if (!isIdentifierChar(c) && c != '.') {
             return false;
         }
     }
@@ -234,10 +247,11 @@ StackFrame StackTraceParser::parseFrame(std::string_view line) {
 
     const std::size_t lastDot = head.rfind('.');
     if (lastDot != std::string_view::npos && lastDot > 0 && lastDot + 1 < head.size()) {
-        frame.className = std::string(head.substr(0, lastDot));
+        frame.className =
+            std::string(strings::classNameWithoutModule(head.substr(0, lastDot)));
         frame.methodName = std::string(head.substr(lastDot + 1));
     } else if (!head.empty()) {
-        frame.className = std::string(head);
+        frame.className = std::string(strings::classNameWithoutModule(head));
     }
 
     if (source == "Native Method") {

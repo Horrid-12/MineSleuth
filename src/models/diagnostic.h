@@ -82,7 +82,33 @@ inline bool isPlatformModId(std::string_view id) {
            lower == "neoforge" || lower == "quilt" || lower == "quilt_loader" ||
            lower == "quilt-loader" || lower == "java" || lower == "openjdk" ||
            lower == "oracle" || lower == "mixin" || lower == "sponge" ||
-           lower == "spongepowered" || lower == "knot";
+           lower == "spongepowered";
+}
+
+// Packages shipped by the game, its loaders, and the JVM are platform code, not
+// user-installed mods. Class-loader and module prefixes are removed before this
+// check, so the same rule covers Fabric, Quilt, Forge, NeoForge, Paper, JPMS,
+// and custom launch wrappers.
+inline bool isPlatformPackage(std::string_view packageOrClass) {
+    static constexpr std::string_view kPlatformPrefixes[] = {
+        "java.",                "javax.",             "jdk.",
+        "sun.",                 "com.sun.",           "net.minecraft.",
+        "com.mojang.",          "net.fabricmc.",      "org.quiltmc.",
+        "cpw.mods.",            "net.minecraftforge.", "net.neoforged.",
+        "org.spongepowered.",   "org.bukkit.",        "org.spigotmc.",
+        "io.papermc.",          "com.destroystokyo.", "net.md_5.bungee.",
+        "com.velocitypowered.", "org.objectweb.asm.", "org.apache.",
+        "io.netty.",            "org.lwjgl.",         "com.google.",
+        "it.unimi.",            "org.slf4j.",         "org.jetbrains.",
+        "kotlin.",              "org.openjdk.",       "com.typesafe.",
+        "org.reactivestreams.",
+    };
+    for (std::string_view prefix : kPlatformPrefixes) {
+        if (strings::startsWith(packageOrClass, prefix)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Which mod an error points at. modId is filled when the input names the mod
@@ -101,20 +127,8 @@ struct ModAttribution {
     Confidence confidence = Confidence::Unverified;
 
     bool isPlatform() const {
-        if (isPlatformModId(modId)) {
-            return true;
-        }
-        if (!ownerPackage.empty()) {
-            if (strings::startsWith(ownerPackage, "net.minecraft") ||
-                strings::startsWith(ownerPackage, "net.fabricmc") ||
-                strings::startsWith(ownerPackage, "net.minecraftforge") ||
-                strings::startsWith(ownerPackage, "net.neoforged") ||
-                strings::startsWith(ownerPackage, "java.") ||
-                strings::startsWith(ownerPackage, "javax.")) {
-                return true;
-            }
-        }
-        return false;
+        return isPlatformModId(modId) ||
+               (!ownerPackage.empty() && isPlatformPackage(ownerPackage));
     }
 
     std::string label() const {

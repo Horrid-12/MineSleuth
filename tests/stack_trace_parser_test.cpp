@@ -33,10 +33,37 @@ TEST(StackTraceParserTest, ParsesModulePrefixedFrame) {
     const StackFrame frame =
         StackTraceParser::parseFrame("\tat java.base/java.lang.Thread.run(Thread.java:840)");
     ASSERT_TRUE(frame.className.has_value());
-    EXPECT_EQ(*frame.className, "java.base/java.lang.Thread");
+    EXPECT_EQ(*frame.className, "java.lang.Thread");
     EXPECT_EQ(*frame.methodName, "run");
     ASSERT_TRUE(frame.lineNumber.has_value());
     EXPECT_EQ(*frame.lineNumber, 840);
+    EXPECT_NE(frame.raw.find("java.base/java.lang.Thread"), std::string::npos);
+}
+
+TEST(StackTraceParserTest, ParsesLoaderAndModulePrefixedFrames) {
+    const char* fabricLine =
+        "\tat knot//net.minecraft.class_1439.method_37908(class_1439.java:123)";
+    EXPECT_TRUE(StackTraceParser::looksLikeFrame(fabricLine));
+    const StackFrame fabric = StackTraceParser::parseFrame(fabricLine);
+    ASSERT_TRUE(fabric.className.has_value());
+    EXPECT_EQ(*fabric.className, "net.minecraft.class_1439");
+    EXPECT_EQ(*fabric.methodName, "method_37908");
+    EXPECT_NE(fabric.raw.find("knot//net.minecraft.class_1439"), std::string::npos);
+
+    const char* customLine =
+        "\tat launcher/example.module@1.0/com.example.coolutil.Widget.tick(Widget.java:42)";
+    EXPECT_TRUE(StackTraceParser::looksLikeFrame(customLine));
+    const StackFrame custom = StackTraceParser::parseFrame(customLine);
+    ASSERT_TRUE(custom.className.has_value());
+    EXPECT_EQ(*custom.className, "com.example.coolutil.Widget");
+    EXPECT_EQ(*custom.methodName, "tick");
+}
+
+TEST(StackTraceParserTest, SignatureNormalizesModulePrefix) {
+    StackFrame frame;
+    frame.className = "custom.loader//com.example.coolutil.Widget";
+    frame.methodName = "tick";
+    EXPECT_EQ(frame.signature(), "com.example.coolutil.Widget.tick");
 }
 
 TEST(StackTraceParserTest, ParsesUnknownSourceFrame) {

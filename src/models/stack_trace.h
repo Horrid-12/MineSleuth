@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "utils/class_names.h"
+
 namespace minesleuth {
 
 struct StackFrame {
@@ -19,7 +21,7 @@ struct StackFrame {
         if (!className.has_value()) {
             return {};
         }
-        std::string out = *className;
+        std::string out(strings::classNameWithoutModule(*className));
         if (methodName.has_value()) {
             out += '.';
             out += *methodName;

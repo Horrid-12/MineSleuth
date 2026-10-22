@@ -37,9 +37,11 @@ Delivered:
   stack frame packages matched against the crash report mod list, or classes
   named inside exception messages. Every diagnostic carries a `Mod:` lead and a
   fix step that names that mod (or its package) instead of generic advice.
-  Fabric/Quilt (`knot//...`) and JPMS (`java.base/...`) module prefixes are
-  stripped before platform filtering and package extraction, so loader internals
-  are never reported as removable mods.
+  Module and class-loader prefixes (`java.base/...`, Fabric's `knot//...`, Quilt,
+  and custom launchers) are stripped in the parser and again during attribution.
+  Platform checks cover Fabric, Quilt, Forge, NeoForge, Bukkit/Spigot/Paper,
+  BungeeCord, Velocity, and JPMS, so loader internals are never reported as
+  removable mods.
 - CLI shows the summary box, crash report context, grouped errors, and diagnostics.
 
 ## Phase 3: Desktop interface (Completed)

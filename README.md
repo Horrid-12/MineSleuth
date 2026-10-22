@@ -33,10 +33,10 @@
 - Reconstructs multiline Java exceptions: root header, `Caused by:`, `Suppressed:`, stack frames, and omitted-frame markers.
 - Reads Minecraft `.txt` crash reports (description, system details, mod list) and auto-detects the input format.
 - Groups duplicate errors so one issue appears once with its occurrence count and top frame.
-- Matches 21 known-issue rules and reports each finding with severity, confidence, evidence, and fix steps.
+- Matches 39 known-issue rules and reports each finding with severity, confidence, evidence, and fix steps.
 - Names the specific mod behind each error (crash report mod list, mod ids in messages, stack frame packages) and gives a mod-specific fix step instead of generic advice.
 - Falls back to an explicit `unrecognized-error` diagnosis instead of guessing.
-- Ships a GoogleTest suite (65 tests) with log and crash report fixtures.
+- Ships a GoogleTest suite (68 tests) with log and crash report fixtures.
 
 ## Roadmap
 

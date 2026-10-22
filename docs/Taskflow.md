@@ -21,9 +21,12 @@ Delivered:
   details, mod list, exception blocks); `InputDetector` chooses log vs crash report.
 - `ExceptionExtractor` filters plausible exceptions; `ErrorGrouper` collapses
   repeated errors into groups with count, first line, severity, and top frame.
-- `RuleEngine` + `DefaultRules` ship 21 rules (18 pattern rules, a repeated-error
+- `RuleEngine` + `DefaultRules` ship 39 rules (36 pattern rules, a repeated-error
   rule, a crash-report-description rule, and an `unrecognized-error` fallback),
-  each returning severity, confidence, evidence, reasoning, and fix steps.
+  each returning severity, confidence, evidence, reasoning, and fix steps. The
+  36 pattern rules include storage damage, locked files, config/JSON/pack
+  parsing, JVM and Java version problems, port binding, authentication, and mod
+  loading, remapping, access-transformer, and mixin-config failures.
 - `ModAttributor` names the mod behind each error: mod ids written in messages,
   stack frame packages matched against the crash report mod list, or classes
   named inside exception messages. Every diagnostic carries a `Mod:` lead and a

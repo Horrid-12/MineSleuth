@@ -15,14 +15,22 @@ All notable changes to this project will be documented in this file. This file w
   details, mod list, and automatic input format detection (`InputDetector`).
 - Exception extraction (`ExceptionExtractor`) and duplicate error grouping
   (`ErrorGrouper`) with occurrence counts, severities, and top frames.
-- Rule engine (`RuleEngine`) with 21 known-issue rules, diagnostic confidence
-  levels (`confirmed` / `likely` / `unverified`), evidence, and fix steps.
+- Rule engine (`RuleEngine`) with 39 known-issue rules (36 pattern rules, a
+  repeated-error rule, a crash-report-description rule, and an
+  `unrecognized-error` fallback), diagnostic confidence levels (`confirmed` /
+  `likely` / `unverified`), evidence, and fix steps.
+- 18 additional pattern rules covering locked files, corrupt chunks and regions,
+  world save failures, malformed JSON and config files, data packs, resource
+  packs, Java version mismatch, invalid JVM arguments, native JVM crashes, stack
+  overflows, concurrent modification, server port binding, authentication
+  failures, mod load failures, access transformers, remapping failures, and
+  invalid mixin configs.
 - `unrecognized-error` fallback that reports honestly when no rule matched.
 - Mod identification (`ModAttributor`, `ModRegistry`): diagnostics name the mod
   behind the error from crash report mod lists, mod ids written in messages,
   stack frame packages, and classes named in exception messages, and append a
   rule-aware fix step for that specific mod.
-- GoogleTest suite (65 tests) with log and crash report fixtures under `tests/`.
+- GoogleTest suite (68 tests) with log and crash report fixtures under `tests/`.
 
 ### Changed
 - Project builds as a `minesleuth_core` static library plus the `minesleuth`

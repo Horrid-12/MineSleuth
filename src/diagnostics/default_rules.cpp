@@ -523,6 +523,195 @@ std::vector<std::unique_ptr<DiagnosticRule>> createDefaultRules() {
          "Confirm the instance's loader in the launcher before adding mods.",
          "Remove mods that belong to a different loader."}));
 
+    rules.push_back(pattern(
+        "file-locked",
+        R"(the process cannot access the file because it is being used by another process|sharing violation|filesystemexception.{0,120}(?:in use|being used|locked)|(?:file|folder|directory) .{0,80}(?:is|are) (?:already )?(?:in use|locked|open in another process))",
+        Severity::Error, Confidence::Likely, "File is locked by another process",
+        "Another process (often a second game instance, a launcher, or antivirus) is holding a "
+        "file open, so the game cannot read or write it.",
+        {"Close other Minecraft instances, launchers, and editors that may have the file open.",
+         "Wait a few seconds and retry, since antivirus scans can lock files briefly.",
+         "Add the game folder to your antivirus exclusions if the lock keeps recurring."}));
+
+    rules.push_back(pattern(
+        "chunk-corruption",
+        R"((?:corrupt|corrupted|bad|invalid) (?:chunk|region)(?: file)?|chunk (?:file )?(?:at|in) [^\s]+ (?:is )?(?:corrupt|missing|invalid)|(?:failed|error|unable) to (?:load|read|parse) (?:the )?chunk|region file .{0,80}(?:corrupt|invalid|truncated))",
+        Severity::Error, Confidence::Likely, "Chunk or region data is damaged",
+        "The game could not read a chunk or region file, which usually means the save was "
+        "interrupted or the file was damaged by a crash or disk problem.",
+        {"Restore the affected region file from a backup before loading the world again.",
+         "Run a world repair tool or let the game regenerate the affected chunk if losing it is "
+         "acceptable.",
+         "Check the disk for errors if corruption affects more than one region file."}));
+
+    rules.push_back(pattern(
+        "world-save-failure",
+        R"((?:failed|could not|unable|error) (?:to )?(?:save|write) (?:the )?(?:world|level|chunk|player data)|(?:saving|world save) (?:failed|error)|(?:world|level) (?:could not|cannot|failed to) be saved|exception (?:while|during) saving)",
+        Severity::Error, Confidence::Likely, "World could not be saved",
+        "The game failed while writing world or player data, so recent progress may not have "
+        "been persisted.",
+        {"Free disk space and check that the save folder is writable before playing again.",
+         "Close other programs that may have the world files open.",
+         "Back up the world folder and check the log for the underlying I/O exception."}));
+
+    rules.push_back(pattern(
+        "json-parse-error",
+        R"(jsonsyntaxexception|jsonparseexception|malformedjson(?:exception)?|json (?:parse|syntax|decoding) (?:error|exception|failed)|(?:parse|parsing) (?:error|exception).{0,40}json|unexpected (?:token|character|end of input).{0,60}(?:json|line \d+)|invalid json)",
+        Severity::Error, Confidence::Likely, "Malformed JSON data",
+        "A JSON file or response could not be parsed, so the mod or game component that reads "
+        "it may skip its configuration or fail to start.",
+        {"Find the JSON file named in the evidence and validate it with a JSON checker.",
+         "Restore the file from a backup or delete it so the mod regenerates a clean default.",
+         "Reinstall the mod if the malformed JSON ships inside its jar."}));
+
+    rules.push_back(pattern(
+        "config-parse-failure",
+        R"((?:could not|failed|unable) (?:to )?(?:parse|read|load) (?:the )?config(?:uration)?(?: file)?|(?:invalid|malformed|corrupt(?:ed)?) config(?:uration)?(?: file)?|config(?:uration)?(?: file)? (?:is )?(?:invalid|malformed|corrupt(?:ed)?)|toml.{0,40}(?:parse|syntax) (?:error|exception))",
+        Severity::Warning, Confidence::Likely, "Config file could not be parsed",
+        "A mod's configuration file is invalid or unreadable, so the mod may fall back to "
+        "defaults or skip loading.",
+        {"Open the config file named in the evidence and check for syntax errors near the "
+         "reported line.",
+         "Restore the file from a backup or delete it to let the mod regenerate defaults.",
+         "Avoid editing configs while the game is running, since the file may be rewritten on "
+         "exit."}));
+
+    rules.push_back(pattern(
+        "data-pack-error",
+        R"((?:failed|could not|unable|error) (?:to )?(?:load|read|parse|apply) (?:the )?data ?pack|data ?pack .{0,80}(?:failed|invalid|corrupt|could not (?:be )?(?:loaded|read|parsed))|invalid data ?pack|(?:error|exception) (?:while|during) (?:loading|reading) (?:the )?data ?pack)",
+        Severity::Error, Confidence::Likely, "Data pack failed to load",
+        "A data pack could not be loaded or parsed, so its recipes, loot tables, or world data "
+        "are missing from the game.",
+        {"Check that the data pack's pack.mcmeta is valid and matches the pack format for your "
+         "game version.",
+         "Remove recently added data packs one at a time to identify the broken one.",
+         "Re-download the pack if its files may have been corrupted."}));
+
+    rules.push_back(pattern(
+        "resource-pack-error",
+        R"((?:failed|could not|unable|error) (?:to )?(?:load|read|parse|apply) (?:the )?resource ?pack|resource ?pack .{0,80}(?:failed|invalid|corrupt|could not (?:be )?(?:loaded|read|parsed))|invalid resource ?pack|(?:error|exception) (?:while|during) (?:loading|applying) (?:the )?resource ?pack)",
+        Severity::Warning, Confidence::Likely, "Resource pack failed to load",
+        "A resource pack could not be loaded or parsed, so textures, models, or sounds from it "
+        "will be missing or fall back to vanilla.",
+        {"Check that the pack is built for your Minecraft version and has a valid pack.mcmeta.",
+         "Remove recently added resource packs one at a time to identify the broken one.",
+         "Re-download the pack if its files may have been corrupted."}));
+
+    rules.push_back(pattern(
+        "java-version-mismatch",
+        R"((?:requires?|needs?) (?:java|jdk) (?:version )?\d+|(?:java|jdk) (?:version )?\d+ (?:or (?:newer|later|higher)|is required)|(?:unsupported|incompatible|wrong) java version|you are (?:running|using) (?:an? )?(?:unsupported|incompatible|outdated) (?:java|jdk))",
+        Severity::Error, Confidence::Likely, "Wrong Java version",
+        "A mod or the game requires a different Java version than the one the launcher started, "
+        "so it cannot run on this runtime.",
+        {"Set the launcher to use the Java version named in the evidence (17 or 21 are common "
+         "for modern versions).",
+         "Remove old Java installations from the launcher's Java list to avoid picking the "
+         "wrong one.",
+         "If no matching runtime is installed, install a current JDK and point the launcher at "
+         "it."}));
+
+    rules.push_back(pattern(
+        "jvm-fatal-crash",
+        R"(a fatal error has been detected by the java runtime environment|exception_access_violation|sigsegv|hs_err_pid|fatal error (?:in|on) (?:the )?(?:jvm|java runtime)|jvm (?:has )?crashed|java runtime environment has (?:crashed|encountered a fatal error))",
+        Severity::Critical, Confidence::Confirmed, "Java runtime crashed",
+        "The JVM itself terminated abnormally (a native crash), which points at a driver, "
+        "native library, or hardware problem rather than a normal Java exception.",
+        {"Open the hs_err_pid log named in the evidence and read the problematic frame.",
+         "Update your graphics drivers and remove mods that ship native libraries.",
+         "Test with a smaller mod set and default JVM arguments to rule out memory or driver "
+         "pressure."}));
+
+    rules.push_back(pattern(
+        "jvm-argument-error",
+        R"(unrecognized (?:vm|jvm) option|error: could not create the java virtual machine|error occurred during initialization of vm|could not reserve enough space for object heap|invalid (?:jvm|vm) (?:option|argument)|unable to create (?:the )?java virtual machine|missing (?:vm|jvm) option)",
+        Severity::Critical, Confidence::Confirmed, "Invalid JVM arguments",
+        "The launcher passed an option the JVM rejected or could not satisfy, so the game "
+        "process never started.",
+        {"Remove custom JVM arguments and let the launcher use its defaults.",
+         "Check for a typo or an unsupported flag such as a GC option your Java version does "
+         "not provide.",
+         "Lower -Xmx if the requested heap is larger than the memory your system can reserve."}));
+
+    rules.push_back(pattern(
+        "stack-overflow",
+        R"(stackoverflowerror|stack overflow)",
+        Severity::Error, Confidence::Confirmed, "Stack overflow",
+        "A call chain recursed until the thread ran out of stack space, which usually means a "
+        "mod has an infinite loop or recursive event handler.",
+        {"Find the repeating frame in the stack trace; the class it belongs to owns the loop.",
+         "Update or remove the mod responsible for that frame.",
+         "If the trace is dominated by a scripting or config library, test with it removed."}));
+
+    rules.push_back(pattern(
+        "concurrent-modification",
+        R"(concurrentmodificationexception|concurrent modification(?: of| exception)?)",
+        Severity::Error, Confidence::Likely, "Collection modified while in use",
+        "Code changed a collection while another part of the game was iterating it, which is a "
+        "thread-safety bug in the mod that owns the code.",
+        {"Identify the mod frame closest to the ConcurrentModificationException.",
+         "Update that mod; this class of bug is usually fixed in later builds.",
+         "If no update exists, remove the mod or report the trace to its author."}));
+
+    rules.push_back(pattern(
+        "port-in-use",
+        R"(address already in use|bindexception|failed to bind (?:to )?(?:port|address|server)|could not bind (?:to )?(?:port|address|server)|port \d+ (?:is )?(?:already )?in use)",
+        Severity::Error, Confidence::Likely, "Server port is already in use",
+        "The server could not claim its port because another process is already listening on it, "
+        "so clients cannot connect.",
+        {"Close any other server or game instance using the same port.",
+         "Change server-port in server.properties if you need both instances to run.",
+         "Check for leftover Java processes in Task Manager or Activity Monitor."}));
+
+    rules.push_back(pattern(
+        "authentication-failure",
+        R"(authenticationexception|authentication servers? (?:are|is) (?:down|unreachable)|failed to authenticate|invalid session|session (?:has )?expired|invalid credentials|unable to (?:authenticate|verify) (?:the )?(?:user|session|account))",
+        Severity::Warning, Confidence::Likely, "Authentication failed",
+        "The game could not verify the player's session with Mojang or Microsoft, so online "
+        "features and multiplayer login were refused.",
+        {"Restart the launcher and sign in again to refresh the session token.",
+         "Check that the system clock is correct, since expired tokens often follow clock drift.",
+         "Retry later if the authentication servers are reported as down."}));
+
+    rules.push_back(pattern(
+        "mod-load-failure",
+        R"((?:failed|could not|unable) (?:to )?(?:load|initialize|initialise|construct) (?:the )?mod\b|mod .{0,60} (?:failed|could not) (?:to )?(?:load|initialize|initialise)|(?:error|exception) (?:while|during) (?:loading|initializing|initialising) (?:the )?mod\b|mod loading (?:failed|error(?:ed)?))",
+        Severity::Error, Confidence::Likely, "Mod failed to load",
+        "The loader reported that a mod could not be loaded or initialized, so that mod's "
+        "content is absent from the game.",
+        {"Read the surrounding stack trace to find the mod and the failing class.",
+         "Check that the mod's dependencies are installed and built for your game version.",
+         "Reinstall the mod, then remove it temporarily to confirm it is the trigger."}));
+
+    rules.push_back(pattern(
+        "access-transformer-error",
+        R"(access ?transformer.{0,60}(?:error|failed|invalid|exception|could not)|(?:failed|could not|unable) (?:to )?(?:apply|parse|read) (?:the )?access ?transformer|invalid access ?transformer)",
+        Severity::Error, Confidence::Likely, "Access transformer failed",
+        "A mod's access transformer could not be applied or parsed, so its widened access rules "
+        "are missing and dependent code may fail later.",
+        {"Check the accesstransformer.cfg named in the evidence for invalid or outdated entries.",
+         "Update the mod that ships the transformer to a build for your game version.",
+         "Remove the mod if the transformer error persists after reinstalling it."}));
+
+    rules.push_back(pattern(
+        "remap-failure",
+        R"(failed to remap|remap(?:ping)? (?:failed|error)|remap(?:ping)? exception|(?:error|exception) (?:while|during) remap(?:ping)?|invalid (?:mapping|remap))",
+        Severity::Error, Confidence::Likely, "Class remapping failed",
+        "The loader could not remap classes or members between mappings, which usually means "
+        "mismatched mod, loader, or Minecraft versions.",
+        {"Verify that every mod and the loader target the same Minecraft version.",
+         "Update the failing mod and the loader together.",
+         "Remove mods that were built against a different mapping set."}));
+
+    rules.push_back(pattern(
+        "mixin-config-error",
+        R"((?:mixins?\.json|mixin config).{0,80}(?:invalid|failed|failure|could not|not found|missing|corrupt|malformed)|(?:invalid|could not (?:read|parse|find|load)|failed to (?:read|parse|load)) (?:the )?(?:mixin config|mixins?\.json))",
+        Severity::Error, Confidence::Likely, "Mixin configuration is invalid",
+        "A mod's mixin configuration could not be read or validated, so its patches were never "
+        "applied.",
+        {"Check the mixin JSON named in the evidence for syntax errors or missing targets.",
+         "Reinstall the mod to restore its bundled mixin configuration.",
+         "Update the mod if its mixin config targets a Minecraft version you are not running."}));
+
     rules.push_back(std::make_unique<RepeatedErrorRule>());
     rules.push_back(std::make_unique<CrashReportDescriptionRule>());
     rules.push_back(std::make_unique<UnrecognizedErrorRule>());

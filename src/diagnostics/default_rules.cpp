@@ -67,6 +67,7 @@ public:
         std::string explanation;
         std::vector<std::string> suggestions;
         bool refinePathConfidence = false;
+        bool scanInformational = false;
     };
 
     explicit PatternRule(Spec spec) : spec_(std::move(spec)) {
@@ -80,7 +81,7 @@ public:
         std::unordered_map<std::size_t, std::string> evidenceByEntry;
         for (std::size_t i = 0; i < context.entries.size(); ++i) {
             const LogEntry& entry = context.entries[i];
-            if (!isProblemEntry(entry)) {
+            if (!spec_.scanInformational && !isProblemEntry(entry)) {
                 continue;
             }
             const std::string text = searchText(entry);
@@ -92,7 +93,30 @@ public:
             evidenceByEntry[i] = lineContaining(text, static_cast<std::size_t>(match.position(0)));
         }
         if (matched.empty()) {
-            return {};
+            // Crash report descriptions are stored outside the log entries. Let rules
+            // inspect that text too, so description-only failures (for example
+            // "Ticking entity") still produce a specific diagnosis.
+            if (context.crashReport == nullptr || context.crashReport->description.empty()) {
+                return {};
+            }
+            const CrashReport& report = *context.crashReport;
+            std::smatch descriptionMatch;
+            if (!std::regex_search(report.description, descriptionMatch, regex_)) {
+                return {};
+            }
+            Diagnostic diagnostic;
+            diagnostic.ruleId = spec_.id;
+            diagnostic.title = spec_.title;
+            diagnostic.explanation = spec_.explanation;
+            diagnostic.suggestions = spec_.suggestions;
+            diagnostic.confidence = spec_.confidence;
+            diagnostic.severity = spec_.severity;
+            diagnostic.occurrences = 1;
+            diagnostic.sourceLine = report.descriptionLine;
+            diagnostic.entryIndex = kNoEntry;
+            diagnostic.evidence = evidenceOf(report.description);
+            diagnostic.sourceLabel = "crash report";
+            return {std::move(diagnostic)};
         }
 
         std::unordered_map<std::size_t, std::size_t> entryToGroup;
@@ -157,7 +181,8 @@ std::unique_ptr<DiagnosticRule> pattern(std::string id, std::string regexPattern
                                         Severity severity, Confidence confidence, std::string title,
                                         std::string explanation,
                                         std::vector<std::string> suggestions,
-                                        bool refinePathConfidence = false) {
+                                        bool refinePathConfidence = false,
+                                        bool scanInformational = false) {
     PatternRule::Spec spec{std::move(id),
                            std::move(regexPattern),
                            severity,
@@ -165,7 +190,8 @@ std::unique_ptr<DiagnosticRule> pattern(std::string id, std::string regexPattern
                            std::move(title),
                            std::move(explanation),
                            std::move(suggestions),
-                           refinePathConfidence};
+                           refinePathConfidence,
+                           scanInformational};
     return std::make_unique<PatternRule>(std::move(spec));
 }
 
@@ -348,7 +374,7 @@ std::vector<std::unique_ptr<DiagnosticRule>> createDefaultRules() {
 
     rules.push_back(pattern(
         "missing-mandatory-dependency",
-        R"(missing (?:or unsupported )?(?:mandatory |required )?(?:mod )?dependenc\w*|missing (?:required|mandatory) mod|depends? on (?:mod |the mod)|could not find (?:the )?(?:required|mandatory) (?:mod|dependenc)\w*|requires? (?:the )?mod\b)",
+        R"(missing (?:or unsupported )?(?:mandatory |required )?(?:mod )?dependenc\w*|missing (?:required|mandatory) mod|depends? on (?:mod |the mod)|could not find (?:the )?(?:required|mandatory) (?:mod|dependenc)\w*|could not find required mod|requires? (?:the )?mod\b)",
         Severity::Error, Confidence::Confirmed, "Missing mod dependency",
         "The log explicitly reports a mod dependency that is absent or unsupported, so the "
         "dependent mod cannot be resolved.",
@@ -535,7 +561,7 @@ std::vector<std::unique_ptr<DiagnosticRule>> createDefaultRules() {
 
     rules.push_back(pattern(
         "chunk-corruption",
-        R"((?:corrupt|corrupted|bad|invalid) (?:chunk|region)(?: file)?|chunk (?:file )?(?:at|in) [^\s]+ (?:is )?(?:corrupt|missing|invalid)|(?:failed|error|unable) to (?:load|read|parse) (?:the )?chunk|region file .{0,80}(?:corrupt|invalid|truncated))",
+        R"((?:corrupt|corrupted|bad|invalid) (?:chunk|region)(?: file)?|chunk (?:file )?(?:at|in) [^\s]+ (?:is )?(?:corrupt|missing|invalid)|(?:failed|error|unable) to (?:load|read|parse) (?:the )?chunk|couldn't load chunk|chunkregionloader\.load(?:chunk|entities)|exception generating new chunk|region file .{0,80}(?:corrupt|invalid|truncated))",
         Severity::Error, Confidence::Likely, "Chunk or region data is damaged",
         "The game could not read a chunk or region file, which usually means the save was "
         "interrupted or the file was damaged by a crash or disk problem.",
@@ -664,7 +690,7 @@ std::vector<std::unique_ptr<DiagnosticRule>> createDefaultRules() {
 
     rules.push_back(pattern(
         "authentication-failure",
-        R"(authenticationexception|authentication servers? (?:are|is) (?:down|unreachable)|failed to authenticate|invalid session|session (?:has )?expired|invalid credentials|unable to (?:authenticate|verify) (?:the )?(?:user|session|account))",
+        R"(authenticationexception|authentication servers? (?:are|is) (?:down|unreachable)|failed to authenticate|invalid session|session (?:has )?expired|invalid credentials|unable to (?:authenticate|verify) (?:the )?(?:user|session|account)|failed to read from https?://api\.minecraftservices\.com/publickeys)",
         Severity::Warning, Confidence::Likely, "Authentication failed",
         "The game could not verify the player's session with Mojang or Microsoft, so online "
         "features and multiplayer login were refused.",
@@ -674,7 +700,7 @@ std::vector<std::unique_ptr<DiagnosticRule>> createDefaultRules() {
 
     rules.push_back(pattern(
         "mod-load-failure",
-        R"((?:failed|could not|unable) (?:to )?(?:load|initialize|initialise|construct) (?:the )?mod\b|mod .{0,60} (?:failed|could not) (?:to )?(?:load|initialize|initialise)|(?:error|exception) (?:while|during) (?:loading|initializing|initialising) (?:the )?mod\b|mod loading (?:failed|error(?:ed)?))",
+        R"((?:failed|could not|unable) (?:to )?(?:load|initialize|initialise|construct) (?:the )?mod\b|mod .{0,60} (?:failed|could not) (?:to )?(?:load|initialize|initialise)|(?:error|exception) (?:while|during) (?:loading|initializing|initialising) (?:the )?mod\b|mod loading (?:failed|error(?:ed)?)|(?:has )?failed to load correctly|caught exception from [^\n]+|encountered an error during [^\n]{0,40}(?:loading|initialization))",
         Severity::Error, Confidence::Likely, "Mod failed to load",
         "The loader reported that a mod could not be loaded or initialized, so that mod's "
         "content is absent from the game.",
@@ -711,6 +737,180 @@ std::vector<std::unique_ptr<DiagnosticRule>> createDefaultRules() {
         {"Check the mixin JSON named in the evidence for syntax errors or missing targets.",
          "Reinstall the mod to restore its bundled mixin configuration.",
          "Update the mod if its mixin config targets a Minecraft version you are not running."}));
+
+    // The message formats below were cross-checked against the MIT-licensed
+    // Aternos codex-minecraft analyser (https://github.com/aternosorg/codex-minecraft),
+    // which powers the mclo.gs insights.
+
+    rules.push_back(pattern(
+        "mod-conflict",
+        R"(incompatible mod set|(?:is incompatible|conflicts) with [^\n]{0,160}of (?:mod )?'[^']+'|mod [^\n]{0,80} (?:is )?incompatible with (?:mod )?[^\n]{0,80})",
+        Severity::Error, Confidence::Confirmed, "Mods are incompatible",
+        "The log explicitly reports two mods that cannot run together, usually because one "
+        "targets a version or API the other does not support.",
+        {"Remove one of the conflicting mods named in the evidence.",
+         "Update both mods to versions that declare compatibility with each other.",
+         "Check the mod pages for a known incompatibility and a recommended alternative."}));
+
+    rules.push_back(pattern(
+        "duplicate-mod-version",
+        R"(duplicate versions? for mod(?: id)? '[^']+'|found duplicate mod [^\n]{0,120} at \[[^\]]+\])",
+        Severity::Error, Confidence::Confirmed, "Two copies of the same mod",
+        "The loader found more than one build of the same mod id, so it cannot decide which "
+        "version to load.",
+        {"Delete the older duplicate jar named in the evidence.",
+         "Check the mods folder for copies with different filenames but the same mod id.",
+         "Keep only the build that matches your Minecraft version and loader."}));
+
+    rules.push_back(pattern(
+        "fabric-entrypoint-stage",
+        R"(could not execute entrypoint stage '[^']+' due to errors, provided by '[^']+')",
+        Severity::Error, Confidence::Confirmed, "Fabric entrypoint threw an error",
+        "A Fabric mod's entrypoint ran but threw an exception, so the mod did not finish "
+        "registering its content.",
+        {"Read the exception below the entrypoint message to find the failing class.",
+         "Reinstall or update the mod that provides the entrypoint.",
+         "Remove the mod temporarily to confirm it is the source of the crash."}));
+
+    rules.push_back(pattern(
+        "mixin-transformer-error",
+        R"(mixintransformererror|mixin transformer (?:error|failed|crashed)|an unexpected critical error was encountered[^\n]{0,80}mixin)",
+        Severity::Error, Confidence::Confirmed, "Mixin transformer crashed",
+        "The Mixin transformer hit a critical error while applying patches, which usually means "
+        "a mod is incompatible with this Minecraft or loader version.",
+        {"Find the mod named in the Caused by section of the mixin stack trace.",
+         "Update or remove the mod that owns the failing mixin.",
+         "Check whether another mod already modifies the same target class."}));
+
+    rules.push_back(pattern(
+        "mod-wrong-minecraft-version",
+        R"(the mod \S+ does not wish to run in minecraft version minecraft [0-9][0-9a-z.\-]*|this mod (?:is|was) (?:built|made) for minecraft [^,\n]{0,40}(?:but|and not))",
+        Severity::Error, Confidence::Confirmed, "Mod refuses this Minecraft version",
+        "A mod explicitly rejected the running Minecraft version, so it was not loaded.",
+        {"Install the build of that mod made for your exact Minecraft version.",
+         "Or switch the instance to the Minecraft version the mod declares.",
+         "Remove the mod if no matching build exists."}));
+
+    rules.push_back(pattern(
+        "world-missing-mod",
+        R"(this world was saved with mod (?!forge\b|minecraft\b)[^\s]+ which appears to be missing)",
+        Severity::Warning, Confidence::Confirmed, "World references a missing mod",
+        "The save was created with a mod that is no longer installed, so blocks, entities, or "
+        "data from that mod may be lost or cause errors.",
+        {"Reinstall the missing mod before loading the world again.",
+         "Restore a backup of the world if the mod cannot be reinstalled.",
+         "If you accept the loss, make a backup and let the game remove unknown content."}));
+
+    rules.push_back(pattern(
+        "world-mod-version-change",
+        R"(this world was saved with mod [^\s]+ version \S+ and it is now at version [^,\n]+)",
+        Severity::Warning, Confidence::Confirmed, "World was saved with a different mod version",
+        "The save was created with another version of an installed mod, which can leave "
+        "incompatible blocks, entities, or data behind.",
+        {"Back up the world before loading it with the new mod version.",
+         "Reinstall the original mod version if the world fails to load correctly.",
+         "Check the mod's changelog for world-data migration steps."},
+        false, true));
+
+    rules.push_back(pattern(
+        "fml-confirm-required",
+        R"(forge mod loader detected that the backup level\.dat is being used|run the command /fml confirm|/fml confirm (?:or|and) /fml cancel)",
+        Severity::Warning, Confidence::Confirmed, "Forge is waiting for confirmation",
+        "The server stopped during startup to ask whether the world should be loaded after a "
+        "mod change, so it will not finish starting until it gets an answer.",
+        {"Run /fml confirm in the server console if the mod change is intentional.",
+         "Run /fml cancel instead if you want to stop the load.",
+         "For unattended servers, set -Dfml.queryResult=confirm in the startup arguments."}));
+
+    rules.push_back(pattern(
+        "missing-datapack-mod",
+        R"(missing data ?pack mod ?: ?[a-z0-9_.\-]+)",
+        Severity::Error, Confidence::Confirmed, "Data pack depends on a missing mod",
+        "A data pack references content from a mod that is not installed, so its recipes or "
+        "world data cannot be loaded.",
+        {"Install the mod named after the colon in the evidence.",
+         "Remove the data pack if you no longer use that mod.",
+         "Check that the data pack and mod target the same Minecraft version."}));
+
+    rules.push_back(pattern(
+        "mod-module-conflict",
+        R"(module\.resolutionexception: modules [^ ]+ and [^ ]+ export package|module\.resolutionexception: module [^ ]+ contains package [^ ]+, module [^ ]+ exports package)",
+        Severity::Error, Confidence::Confirmed, "Mods export the same Java package",
+        "Two mods ship the same Java package in their module path, so the JVM refused to start "
+        "with both of them.",
+        {"Remove one of the two mods named in the evidence.",
+         "Update both mods to builds that no longer bundle the conflicting package.",
+         "Check for a mod that bundles a library already provided by another mod."}));
+
+    rules.push_back(pattern(
+        "malformed-unicode-encoding",
+        R"(malformed \\+uxxxx encoding|malformed \\+u[0-9a-f]{4} encoding)",
+        Severity::Error, Confidence::Confirmed, "Malformed unicode escape in a config",
+        "A properties or config file contains an invalid \\uXXXX escape, so the game failed "
+        "while loading it.",
+        {"Open the file named in the stack trace and fix or remove the invalid \\uXXXX escape.",
+         "Restore the file from a backup or delete it to regenerate defaults.",
+         "Save the file as UTF-8 if it contains non-ASCII text."}));
+
+    rules.push_back(pattern(
+        "ticking-block-entity",
+        R"((?:description: )?ticking block entity|-- block entity being ticked --)",
+        Severity::Critical, Confidence::Confirmed, "Block entity crashed the game",
+        "A block entity threw an exception while ticking, and the crash report identifies the "
+        "block type and location responsible.",
+        {"Find the block location in the crash report's 'Block entity being ticked' section.",
+         "Back up the world, then remove that block with a world editor or by loading a backup.",
+         "Update or remove the mod that owns the block entity."}));
+
+    rules.push_back(pattern(
+        "ticking-entity",
+        R"((?:description: )?ticking entity|-- entity being ticked --)",
+        Severity::Critical, Confidence::Confirmed, "Entity crashed the game",
+        "An entity threw an exception while ticking, and the crash report identifies its type "
+        "and exact location.",
+        {"Find the entity type and coordinates in the crash report's 'Entity being ticked' section.",
+         "Back up the world, then remove that entity with a world editor or command.",
+         "Update or remove the mod that owns the entity."}));
+
+    rules.push_back(pattern(
+        "plugin-runtime-error",
+        R"(could not pass event \w+ to \w+|task \S+ for \w+ \S+ generated an exception)",
+        Severity::Error, Confidence::Likely, "Server plugin threw an error",
+        "A server plugin failed while handling an event or a scheduled task, so that action was "
+        "aborted.",
+        {"Read the stack trace to find the plugin class that threw the exception.",
+         "Update the named plugin; event and scheduler bugs are usually fixed in later builds.",
+         "Remove the plugin temporarily to confirm it is the cause."}));
+
+    rules.push_back(pattern(
+        "world-duplicate",
+        R"(world [^\n]{0,80} is a duplicate of another world and has been prevented from loading|delete the uid\.dat file from [^\n]{0,80} world directory)",
+        Severity::Error, Confidence::Confirmed, "Two worlds share the same identity",
+        "The server found two world folders with the same uid.dat identity and refused to load "
+        "the duplicate.",
+        {"Delete the uid.dat file in the duplicate world folder named in the evidence.",
+         "Or move the duplicate world to a separate server instance.",
+         "Back up both worlds before changing their identity files."}));
+
+    rules.push_back(pattern(
+        "unsupported-api-version",
+        R"(unsupported api version \d+\.\d+|invalidpluginexception: unsupported api version)",
+        Severity::Error, Confidence::Confirmed, "Plugin targets an unsupported API version",
+        "A server plugin was built for a Bukkit API version the server no longer accepts, so it "
+        "was not loaded.",
+        {"Update the plugin to a build for your server version.",
+         "Or run the server version the plugin declares support for.",
+         "Remove the plugin if no compatible build is available."}));
+
+    rules.push_back(pattern(
+        "paper-chunk-version-downgrade",
+        R"(server attempted to load chunk saved with newer version of minecraft! \d+ > \d+)",
+        Severity::Error, Confidence::Confirmed, "World was saved by a newer Minecraft version",
+        "The server tried to load a chunk written by a newer Minecraft version, which cannot be "
+        "downgraded safely.",
+        {"Run the server with the Minecraft version that last saved the world.",
+         "Restore a world backup made before the upgrade.",
+         "Do not downgrade a world in place; copy it and test the downgrade separately."}));
 
     rules.push_back(std::make_unique<RepeatedErrorRule>());
     rules.push_back(std::make_unique<CrashReportDescriptionRule>());

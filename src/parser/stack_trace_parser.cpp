@@ -97,6 +97,23 @@ std::string_view stripThreadPrefix(std::string_view text) {
     return strings::trimView(text.substr(quoteEnd + 1));
 }
 
+std::string_view stripFrameMetadata(std::string_view frame) {
+    // Spigot and older Bukkit servers append metadata such as
+    // "~[minecraft_server.jar:...]" or "[?:1.8.0_144]" after the frame.
+    const std::size_t close = frame.rfind(')');
+    if (close == std::string_view::npos) {
+        return frame;
+    }
+    std::string_view tail = strings::trimView(frame.substr(close + 1));
+    if (!tail.empty() && tail.front() == '~') {
+        tail.remove_prefix(1);
+    }
+    if (tail.size() >= 2 && tail.front() == '[' && tail.back() == ']') {
+        return frame.substr(0, close + 1);
+    }
+    return frame;
+}
+
 }  // namespace
 
 bool StackTraceParser::parseExceptionHeader(std::string_view line, TraceSegment& out) {
@@ -141,7 +158,7 @@ bool StackTraceParser::looksLikeFrame(std::string_view line) {
     if (!strings::startsWith(text, "at ")) {
         return false;
     }
-    const std::string_view rest = strings::trimView(text.substr(3));
+    const std::string_view rest = stripFrameMetadata(strings::trimView(text.substr(3)));
     if (rest.empty() || rest.back() != ')') {
         return false;
     }
@@ -202,7 +219,7 @@ StackFrame StackTraceParser::parseFrame(std::string_view line) {
     if (!strings::startsWith(text, "at ")) {
         return frame;
     }
-    const std::string_view rest = strings::trimView(text.substr(3));
+    const std::string_view rest = stripFrameMetadata(strings::trimView(text.substr(3)));
     if (rest.empty() || rest.back() != ')') {
         return frame;
     }

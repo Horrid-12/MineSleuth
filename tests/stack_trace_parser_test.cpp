@@ -46,6 +46,20 @@ TEST(StackTraceParserTest, ParsesUnknownSourceFrame) {
     EXPECT_FALSE(frame.lineNumber.has_value());
 }
 
+TEST(StackTraceParserTest, ParsesFrameWithServerMetadata) {
+    const StackFrame frame = StackTraceParser::parseFrame(
+        "\tat net.minecraft.server.v1_8_R3.ChunkRegionLoader.loadChunk(ChunkRegionLoader.java:70) "
+        "~[minecraft_server.jar:git-Spigot-db6de12-18fbb24]");
+    ASSERT_TRUE(frame.className.has_value());
+    EXPECT_EQ(*frame.className, "net.minecraft.server.v1_8_R3.ChunkRegionLoader");
+    ASSERT_TRUE(frame.methodName.has_value());
+    EXPECT_EQ(*frame.methodName, "loadChunk");
+    ASSERT_TRUE(frame.sourceFile.has_value());
+    EXPECT_EQ(*frame.sourceFile, "ChunkRegionLoader.java");
+    ASSERT_TRUE(frame.lineNumber.has_value());
+    EXPECT_EQ(*frame.lineNumber, 70);
+}
+
 TEST(StackTraceParserTest, RejectsOrdinaryLogMessages) {
     const char* notHeaders[] = {
         "Missing dependency: jei",

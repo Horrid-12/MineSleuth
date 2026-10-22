@@ -21,12 +21,18 @@ Delivered:
   details, mod list, exception blocks); `InputDetector` chooses log vs crash report.
 - `ExceptionExtractor` filters plausible exceptions; `ErrorGrouper` collapses
   repeated errors into groups with count, first line, severity, and top frame.
-- `RuleEngine` + `DefaultRules` ship 39 rules (36 pattern rules, a repeated-error
+- `RuleEngine` + `DefaultRules` ship 56 rules (53 pattern rules, a repeated-error
   rule, a crash-report-description rule, and an `unrecognized-error` fallback),
   each returning severity, confidence, evidence, reasoning, and fix steps. The
-  36 pattern rules include storage damage, locked files, config/JSON/pack
-  parsing, JVM and Java version problems, port binding, authentication, and mod
-  loading, remapping, access-transformer, and mixin-config failures.
+  53 pattern rules include storage damage, locked files, config/JSON/pack
+  parsing, JVM and Java version problems, port binding, authentication, mod
+  loading/remapping/access-transformer/mixin failures, Fabric mod conflicts and
+  entrypoints, Forge world/mod version problems, ticking entities, plugin
+  runtime errors, and server world/chunk version problems. Mod-loader message
+  formats were cross-checked against Aternos codex-minecraft (MIT).
+- Rules also inspect crash report descriptions (for example ticking entities),
+  and the stack trace parser accepts Spigot/Bukkit frame metadata suffixes so
+  server exceptions still reach the rule engine.
 - `ModAttributor` names the mod behind each error: mod ids written in messages,
   stack frame packages matched against the crash report mod list, or classes
   named inside exception messages. Every diagnostic carries a `Mod:` lead and a

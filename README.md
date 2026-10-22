@@ -33,10 +33,11 @@
 - Reconstructs multiline Java exceptions: root header, `Caused by:`, `Suppressed:`, stack frames, and omitted-frame markers.
 - Reads Minecraft `.txt` crash reports (description, system details, mod list) and auto-detects the input format.
 - Groups duplicate errors so one issue appears once with its occurrence count and top frame.
-- Matches 39 known-issue rules and reports each finding with severity, confidence, evidence, and fix steps.
+- Matches 56 known-issue rules and reports each finding with severity, confidence, evidence, and fix steps.
 - Names the specific mod behind each error (crash report mod list, mod ids in messages, stack frame packages) and gives a mod-specific fix step instead of generic advice.
+- Cross-checks mod-loader message formats against the MIT-licensed [Aternos codex-minecraft](https://github.com/aternosorg/codex-minecraft) analyser, the engine behind mclo.gs insights.
 - Falls back to an explicit `unrecognized-error` diagnosis instead of guessing.
-- Ships a GoogleTest suite (68 tests) with log and crash report fixtures.
+- Ships a GoogleTest suite (71 tests) with log and crash report fixtures.
 
 ### Desktop Interface
 - A responsive Qt 6 graphical dashboard with a Monotonic Prism Launcher Inspired UI.

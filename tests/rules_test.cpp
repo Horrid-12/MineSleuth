@@ -113,6 +113,71 @@ const std::vector<RuleSample>& ruleSamples() {
         {"remap-failure", "Failed to remap class net/example/Foo", "Remapping completed"},
         {"mixin-config-error", "Could not read mixin config examplemod.mixins.json",
          "Mixin config examplemod.mixins.json loaded"},
+        {"missing-mandatory-dependency", "Could not find required mod: examplemod",
+         "Required mods resolved"},
+        {"chunk-corruption", "Couldn't load chunk [12, -34] in world 'world'",
+         "Chunk at 12, -34 loaded"},
+        {"authentication-failure",
+         "Failed to read from https://api.minecraftservices.com/publickeys due to ConnectException",
+         "Public keys downloaded"},
+        {"mod-load-failure", "examplemod has failed to load correctly", "examplemod loaded correctly"},
+        {"mod-conflict",
+         "- Mod 'examplemod' (examplemod) 1.0.0 is incompatible with version 2.0.0 of mod "
+         "'othermod' (othermod),",
+         "Mod compatibility check completed"},
+        {"mod-conflict", "Incompatible mod set!", "Mod set is compatible"},
+        {"duplicate-mod-version",
+         "Duplicate versions for mod ID 'examplemod': [examplemod-1.0.jar at "
+         "/mods/examplemod-1.0.jar, examplemod-2.0.jar at /mods/examplemod-2.0.jar]",
+         "Mod versions checked"},
+        {"fabric-entrypoint-stage",
+         "java.lang.RuntimeException: Could not execute entrypoint stage 'main' due to errors, "
+         "provided by 'examplemod'!",
+         "Entrypoint stage 'main' completed"},
+        {"mixin-transformer-error",
+         "org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected "
+         "critical error was encountered",
+         "Mixin transformer initialized"},
+        {"mod-wrong-minecraft-version",
+         "The mod examplemod does not wish to run in Minecraft version Minecraft 1.20.4. You will "
+         "have to remove it to play.",
+         "Mod examplemod loaded for Minecraft 1.20.4"},
+        {"world-missing-mod",
+         "This world was saved with mod examplemod which appears to be missing, things may not "
+         "work well",
+         "This world was saved successfully"},
+        {"world-mod-version-change",
+         "This world was saved with mod examplemod version 1.0 and it is now at version 2.0, "
+         "things may not work well",
+         "This world was saved with mod examplemod version 1.0"},
+        {"fml-confirm-required", "Run the command /fml confirm or or /fml cancel to proceed.",
+         "Forge Mod Loader started"},
+        {"fml-confirm-required",
+         "Forge Mod Loader detected that the backup level.dat is being used.",
+         "Forge Mod Loader finished starting"},
+        {"missing-datapack-mod", "Missing data pack mod:examplemod", "Loaded 3 data packs"},
+        {"mod-module-conflict",
+         "Exception in thread \"main\" java.lang.module.ResolutionException: Modules example.a and "
+         "example.b export package net.example to module other.mod",
+         "Module system initialized"},
+        {"malformed-unicode-encoding",
+         "java.lang.IllegalArgumentException: Malformed \\uxxxx encoding.", "Encoding UTF-8"},
+        {"ticking-block-entity", "Description: Ticking block entity", "Block entity ticked normally"},
+        {"ticking-entity", "Description: Ticking entity", "Entity ticked normally"},
+        {"plugin-runtime-error", "Could not pass event PlayerJoinEvent to ExamplePlugin",
+         "Plugin events registered"},
+        {"world-duplicate",
+         "World example is a duplicate of another world and has been prevented from loading. "
+         "Please delete the uid.dat file from example's world directory if you want to be able to "
+         "load the duplicate world.",
+         "World loaded"},
+        {"unsupported-api-version",
+         "org.bukkit.plugin.InvalidPluginException: Unsupported API version 1.20",
+         "API version 1.20 supported"},
+        {"paper-chunk-version-downgrade",
+         "java.lang.RuntimeException: Server attempted to load chunk saved with newer version of "
+         "minecraft! 3465 > 3120",
+         "Chunk saved with Minecraft 1.20.4"},
     };
     return samples;
 }
@@ -286,6 +351,31 @@ TEST(RulesTest, AnalyzesOutOfMemoryCrashReport) {
     EXPECT_EQ(description->confidence, Confidence::Confirmed);
     EXPECT_NE(description->explanation.find("Ticking entity"), std::string::npos);
     EXPECT_NE(description->explanation.find("1.20.4"), std::string::npos);
+    EXPECT_NE(findRule(result.diagnostics, "ticking-entity"), nullptr);
+}
+
+TEST(RulesTest, WorldModVersionChangeMatchesInformationalEntry) {
+    const std::vector<Diagnostic> diagnostics = analyze(
+        {makeEntry(LogLevel::INFO,
+                   "This world was saved with mod mcp version 9.42 and it is now at version "
+                   "9.19, things may not work well")});
+    EXPECT_NE(findRule(diagnostics, "world-mod-version-change"), nullptr);
+}
+
+TEST(RulesTest, MatchesTickingBlockEntityCrashDescription) {
+    CrashReport report;
+    report.valid = true;
+    report.description = "Ticking block entity";
+    report.descriptionLine = 42;
+
+    const RuleEngine engine = RuleEngine::withDefaultRules();
+    const std::vector<Diagnostic> diagnostics = engine.evaluate({}, {}, {}, &report, nullptr);
+    const Diagnostic* blockEntity = findRule(diagnostics, "ticking-block-entity");
+    ASSERT_NE(blockEntity, nullptr);
+    EXPECT_EQ(blockEntity->severity, Severity::Critical);
+    EXPECT_EQ(blockEntity->sourceLine, 42u);
+    EXPECT_EQ(blockEntity->sourceLabel, "crash report");
+    EXPECT_EQ(findRule(diagnostics, "ticking-entity"), nullptr);
 }
 
 TEST(RulesTest, AnalyzesFabricCrashReportWithMods) {

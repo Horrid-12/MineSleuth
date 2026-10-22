@@ -166,6 +166,31 @@ TEST(ModAttributorTest, IgnoresPlatformFrames) {
     EXPECT_TRUE(attribution.modId.empty());
 }
 
+TEST(ModAttributorTest, IgnoresFabricKnotModulePrefixFrames) {
+    const ModAttribution attribution = ModAttributor().attribute(tracedEntry(
+        LogLevel::ERROR,
+        "java.lang.NoSuchMethodError: net.minecraft.class_1937 "
+        "net.minecraft.class_1439.method_37908(...)",
+        {"knot//net.minecraft.class_1439", "knot//net.minecraft.class_1937",
+         "java.base/java.lang.Thread"}));
+    EXPECT_FALSE(attribution.identified);
+    EXPECT_TRUE(attribution.modId.empty());
+    EXPECT_TRUE(attribution.ownerPackage.empty());
+    EXPECT_TRUE(attribution.frame.empty());
+}
+
+TEST(ModAttributorTest, ResolvesModulePrefixedThirdPartyFrame) {
+    const ModAttribution attribution =
+        ModAttributor(registryWith("coolutil", "Cool Util", "1.0.0"))
+            .attribute(tracedEntry(LogLevel::ERROR, "Widget exploded",
+                                   {"examplemod//com.example.coolutil.Widget"}));
+    ASSERT_TRUE(attribution.identified);
+    EXPECT_EQ(attribution.modId, "coolutil");
+    EXPECT_EQ(attribution.modName, "Cool Util");
+    EXPECT_EQ(attribution.ownerPackage, "com.example.coolutil");
+    EXPECT_EQ(attribution.basis, ModBasis::KnownModPackage);
+}
+
 TEST(ModAttributorTest, AttributesMissingClassFromExceptionMessage) {
     const std::string message = "java.lang.NoClassDefFoundError: com/coolutil/ModInitializer";
 
@@ -210,6 +235,22 @@ TEST(RulesNameModsTest, EngineAppendsModSpecificFix) {
     ASSERT_NE(entrypoint, nullptr);
     EXPECT_EQ(entrypoint->mod.modId, "coolutil");
     EXPECT_TRUE(anySuggestionNames(*entrypoint, "coolutil"));
+}
+
+TEST(RulesNameModsTest, FabricKnotFrameDoesNotBlameKnot) {
+    const std::vector<Diagnostic> diagnostics =
+        LogAnalyzer()
+            .analyzeEntries({tracedEntry(
+                LogLevel::ERROR,
+                "java.lang.NoSuchMethodError: net.minecraft.class_1937 "
+                "net.minecraft.class_1439.method_37908(...)",
+                {"knot//net.minecraft.class_1439", "knot//net.minecraft.class_1937"})})
+            .diagnostics;
+    const Diagnostic* diagnostic = findRule(diagnostics, "class-not-found");
+    ASSERT_NE(diagnostic, nullptr);
+    EXPECT_FALSE(diagnostic->mod.identified);
+    EXPECT_TRUE(diagnostic->mod.modId.empty());
+    EXPECT_FALSE(anySuggestionNames(*diagnostic, "knot"));
 }
 
 TEST(RulesNameModsTest, MissingDependencyNamesTheDependency) {
@@ -266,6 +307,18 @@ TEST(ModAttributionTest, NeverSuggestsUpdatingOrRemovingMinecraft) {
     EXPECT_NE(fix.find("different Minecraft version"), std::string::npos);
 }
 
+TEST(ModAttributionTest, NeverSuggestsUpdatingOrRemovingFabricKnot) {
+    ModAttribution attribution;
+    attribution.identified = true;
+    attribution.modId = "knot";
+    attribution.frame = "knot//net.minecraft.class_1439.method_37908()";
+
+    EXPECT_TRUE(attribution.isPlatform());
+    const std::string fix = attribution.actionStep("class-not-found");
+    EXPECT_EQ(fix.find("Update or remove knot"), std::string::npos);
+    EXPECT_NE(fix.find("different Minecraft version"), std::string::npos);
+}
+
 TEST(ModAttributionTest, MatchPackageIgnoresMinecraftAndLoaders) {
     ModRegistry registry;
     registry.add({"minecraft", "Minecraft", "1.21.11", "crash report"});
@@ -275,6 +328,8 @@ TEST(ModAttributionTest, MatchPackageIgnoresMinecraftAndLoaders) {
     // Platform packages should not match platform mods
     EXPECT_EQ(registry.matchPackage("net.minecraft.class_1439"), nullptr);
     EXPECT_EQ(registry.matchPackage("net.fabricmc.loader.impl.launch.knot"), nullptr);
+    EXPECT_EQ(registry.matchPackage("knot//net.minecraft.class_1439"), nullptr);
+    EXPECT_EQ(registry.matchPackage("java.base/java.lang.Thread"), nullptr);
 
     // Actual third-party mods match
     const ModRef* matched = registry.matchPackage("me.jellysquid.mods.sodium.client");

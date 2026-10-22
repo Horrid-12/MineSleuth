@@ -43,7 +43,7 @@ All notable changes to this project will be documented in this file. This file w
   behind the error from crash report mod lists, mod ids written in messages,
   stack frame packages, and classes named in exception messages, and append a
   rule-aware fix step for that specific mod.
-- GoogleTest suite (71 tests) with log and crash report fixtures under `tests/`.
+- GoogleTest suite (75 tests) with log and crash report fixtures under `tests/`.
 
 ### Changed
 - Project builds as a `minesleuth_core` static library plus the `minesleuth`
@@ -51,3 +51,9 @@ All notable changes to this project will be documented in this file. This file w
 - Stack frame parsing accepts Spigot/Bukkit metadata suffixes such as
   `~[minecraft_server.jar:...]` and `[?:1.8.0_144]`, so server stack traces
   reach the diagnostic rules instead of being dropped.
+
+### Fixed
+- Stack frames with Fabric/Quilt or JPMS module prefixes (`knot//net.minecraft...`,
+  `java.base/java.lang...`) are normalized before platform checks and package
+  extraction. The Fabric Knot class loader is no longer reported as a mod, and
+  diagnostics no longer suggest updating or removing `knot//net`.

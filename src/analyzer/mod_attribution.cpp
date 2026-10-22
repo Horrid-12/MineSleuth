@@ -88,9 +88,27 @@ std::string findMention(const std::string& text) {
     return {};
 }
 
+// Stack traces from Fabric/Quilt and JPMS can prefix a class with its module,
+// e.g. "knot//net.minecraft.class_1439" or "java.base/java.lang.Thread".
+std::string classNameWithoutModule(const std::string& className) {
+    const std::size_t doubleSlash = className.find("//");
+    if (doubleSlash != std::string::npos) {
+        return className.substr(doubleSlash + 2);
+    }
+    const std::size_t slash = className.find('/');
+    if (slash != std::string::npos) {
+        const std::string rest = className.substr(slash + 1);
+        if (rest.find('.') != std::string::npos) {
+            return rest;
+        }
+    }
+    return className;
+}
+
 // Minecraft, Java, loader, and bundled library packages never name the mod a
 // user should update or remove.
 bool isPlatformClass(const std::string& className) {
+    const std::string normalized = classNameWithoutModule(className);
     static const char* const kPlatform[] = {
         "java.",      "javax.",          "jdk.",          "sun.",
         "com.sun.",   "net.minecraft.",  "com.mojang.",   "net.fabricmc.",
@@ -100,7 +118,7 @@ bool isPlatformClass(const std::string& className) {
         "kotlin.",    "org.openjdk.",    "com.typesafe.", "org.reactivestreams.",
     };
     for (const char* prefix : kPlatform) {
-        if (strings::startsWith(className, prefix)) {
+        if (strings::startsWith(normalized, prefix)) {
             return true;
         }
     }
@@ -133,6 +151,13 @@ std::string candidateIdFromPackage(const std::string& packagePath) {
     }
     const std::string root = packagePath.substr(0, firstDot);
     if (root.size() < 4 || kVendorRoots.count(root) != 0) {
+        return {};
+    }
+    // A module-prefixed frame such as "knot//net.minecraft..." must never become
+    // a mod id; module names are not valid Maven/mod ids.
+    if (root.find_first_not_of(
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") !=
+        std::string::npos) {
         return {};
     }
     return root;
@@ -242,8 +267,9 @@ ModAttribution ModAttributor::attribute(const LogEntry& entry) const {
             ModAttribution attribution;
             attribution.identified = true;
             attribution.frame = frame->signature();
-            attribution.ownerPackage = packageOf(*frame->className);
-            if (const ModRef* known = registry_.matchPackage(*frame->className)) {
+            const std::string className = classNameWithoutModule(*frame->className);
+            attribution.ownerPackage = packageOf(className);
+            if (const ModRef* known = registry_.matchPackage(className)) {
                 applyKnown(attribution, *known);
                 attribution.basis = ModBasis::KnownModPackage;
                 attribution.confidence = Confidence::Likely;

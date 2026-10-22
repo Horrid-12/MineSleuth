@@ -82,7 +82,7 @@ inline bool isPlatformModId(std::string_view id) {
            lower == "neoforge" || lower == "quilt" || lower == "quilt_loader" ||
            lower == "quilt-loader" || lower == "java" || lower == "openjdk" ||
            lower == "oracle" || lower == "mixin" || lower == "sponge" ||
-           lower == "spongepowered";
+           lower == "spongepowered" || lower == "knot";
 }
 
 // Which mod an error points at. modId is filled when the input names the mod
